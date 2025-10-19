@@ -154,14 +154,26 @@
         <div class="cards">
             <a href="/demo.html" class="card">
                 <div class="card-icon">🎬</div>
-                <h2>Record Demo</h2>
-                <p>Test the recording functionality with interactive elements</p>
+                <h2>Custom Recorder Demo</h2>
+                <p>Test the custom recording functionality with interactive elements</p>
             </a>
 
             <a href="/viewer.html" class="card">
                 <div class="card-icon">▶️</div>
-                <h2>Session Viewer</h2>
-                <p>Replay and analyze recorded user sessions</p>
+                <h2>Custom Session Viewer</h2>
+                <p>Replay custom recorded sessions</p>
+            </a>
+
+            <a href="/rrweb-recorder.html" class="card">
+                <div class="card-icon">🎥</div>
+                <h2>RRWeb Recorder Demo</h2>
+                <p>Test RRWeb session recording with full DOM replay</p>
+            </a>
+
+            <a href="/rrweb-player.html" class="card">
+                <div class="card-icon">📹</div>
+                <h2>RRWeb Session Player</h2>
+                <p>Replay RRWeb sessions with full fidelity</p>
             </a>
         </div>
 
@@ -176,11 +188,16 @@
                 <div class="feature-item">👁️ Page Visibility</div>
                 <div class="feature-item">💾 Database Storage</div>
                 <div class="feature-item">▶️ Session Playback</div>
+                <div class="feature-item">🎥 RRWeb DOM Replay</div>
+                <div class="feature-item">🔒 Privacy Controls</div>
+                <div class="feature-item">📊 Event Batching</div>
+                <div class="feature-item">🚀 Auto-flush Events</div>
             </div>
         </div>
 
         <div class="api-info">
             <h3>🔌 API Endpoints</h3>
+            <h4 style="margin-top: 15px; color: #667eea;">Custom Recorder API</h4>
             <div class="endpoint">
                 <span class="method post">POST</span>
                 /api/recording/start - Start new session
@@ -200,6 +217,24 @@
             <div class="endpoint">
                 <span class="method get">GET</span>
                 /api/recording/events/{sessionId} - Get session events
+            </div>
+
+            <h4 style="margin-top: 15px; color: #667eea;">RRWeb Replay API</h4>
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                /api/replay/ingest - Ingest RRWeb events
+            </div>
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                /api/replay/sessions - Get all replay sessions
+            </div>
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                /api/replay/events/{sessionId} - Get replay event batches
+            </div>
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                /api/replay/session/{sessionId} - Get session details
             </div>
         </div>
     </div>

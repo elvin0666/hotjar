@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RRWeb Session Recorder</title>
+</head>
+<body>
+
+<script>
+// =====================================================
+// Configuration
+// =====================================================
+const FLUSH_MS = 10000;        // Send events every 10 seconds
+const FLUSH_COUNT = 50;        // Or after 50 events
+const INGEST_URL = '/api/replay/ingest';
+
+// =====================================================
+// Session Recorder using rrweb
+// =====================================================
+(function() {
+    'use strict';
+
+    // Load rrweb from CDN
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js';
+    script.onload = initRecorder;
+    document.head.appendChild(script);
+
+    let sessionId = null;
+    let eventBuffer = [];
+    let flushTimer = null;
+    let stopRecordFn = null;
+
+    function initRecorder() {
+        // Generate unique session ID
+        sessionId = crypto.randomUUID();
+        console.log('[RRWeb] Session started:', sessionId);
+
+        // Start recording with rrweb
+        stopRecordFn = rrweb.record({
+            emit(event) {
+                // Add event to buffer
+                eventBuffer.push(event);
+
+                // Flush if buffer reaches count limit
+                if (eventBuffer.length >= FLUSH_COUNT) {
+                    flushEvents();
+                }
+            },
+            // Privacy settings
+            maskAllText: true,
+            maskInputOptions: {
+                password: true,
+                email: true,
+                text: true,
+                textarea: true,
+                tel: true,
+                search: true,
+                url: true,
+                number: true,
+                date: true,
+                color: true,
+                time: true,
+                week: true,
+                month: true,
+                datetime: true,
+                'datetime-local': true
+            },
+            // Block elements with .rr-block class
+            blockClass: 'rr-block',
+            // Additional privacy options
+            maskTextClass: 'rr-mask',
+            maskTextSelector: null,
+            // Performance options
+            checkoutEveryNms: 5 * 60 * 1000, // Full snapshot every 5 minutes
+            checkoutEveryNth: null,
+            // Sampling
+            mousemoveWait: 50,
+            // Collect fonts
+            inlineStylesheet: true,
+            recordCanvas: false,
+            collectFonts: true
+        });
+
+        // Set up periodic flush
+        startFlushTimer();
+
+        // Handle page unload
+        window.addEventListener('beforeunload', handleUnload);
+        window.addEventListener('pagehide', handleUnload);
+    }
+
+    function startFlushTimer() {
+        if (flushTimer) {
+            clearInterval(flushTimer);
+        }
+        flushTimer = setInterval(() => {
+            if (eventBuffer.length > 0) {
+                flushEvents();
+            }
+        }, FLUSH_MS);
+    }
+
+    function flushEvents() {
+        if (eventBuffer.length === 0) return;
+
+        const eventsToSend = [...eventBuffer];
+        eventBuffer = [];
+
+        const payload = {
+            sessionId: sessionId,
+            events: eventsToSend,
+            timestamp: Date.now(),
+            url: window.location.href,
+            userAgent: navigator.userAgent
+        };
+
+        // Send events to backend
+        fetch(INGEST_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+            keepalive: true
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log(`[RRWeb] Sent ${eventsToSend.length} events`);
+            } else {
+                console.error('[RRWeb] Failed to send events:', response.status);
+                // Put events back in buffer if failed
+                eventBuffer = [...eventsToSend, ...eventBuffer];
+            }
+        })
+        .catch(error => {
+            console.error('[RRWeb] Error sending events:', error);
+            // Put events back in buffer if failed
+            eventBuffer = [...eventsToSend, ...eventBuffer];
+        });
+    }
+
+    function handleUnload() {
+        // Stop recording
+        if (stopRecordFn) {
+            stopRecordFn();
+        }
+
+        // Clear flush timer
+        if (flushTimer) {
+            clearInterval(flushTimer);
+        }
+
+        // Send remaining events with sendBeacon
+        if (eventBuffer.length > 0) {
+            const payload = {
+                sessionId: sessionId,
+                events: eventBuffer,
+                timestamp: Date.now(),
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                sessionEnd: true
+            };
+
+            const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+            navigator.sendBeacon(INGEST_URL, blob);
+            console.log(`[RRWeb] Sent ${eventBuffer.length} final events via beacon`);
+            eventBuffer = [];
+        }
+    }
+
+    // Expose API for manual control (optional)
+    window.RRWebRecorder = {
+        getSessionId: () => sessionId,
+        flush: flushEvents,
+        stop: () => {
+            if (stopRecordFn) {
+                stopRecordFn();
+                flushEvents();
+            }
+        }
+    };
+})();
+</script>
+
+<!-- Example content with privacy controls -->
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+    }
+    .container {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+        color: #333;
+    }
+    .info {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+    }
+    .form-group {
+        margin: 20px 0;
+    }
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    input, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    button {
+        background: #667eea;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 5px;
+    }
+    button:hover {
+        background: #5568d3;
+    }
+    .rr-block {
+        background: #ffebee;
+        border: 2px dashed #f44336;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    .status {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4caf50;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+</style>
+
+<div class="status">🔴 Recording</div>
+
+<div class="container">
+    <h1>RRWeb Session Recorder Demo</h1>
+
+    <div class="info">
+        <strong>Session Recording Active</strong><br>
+        All interactions are being recorded with privacy protections:<br>
+        • All text is masked<br>
+        • All inputs are masked<br>
+        • Elements with .rr-block class are excluded<br>
+        • Events are sent every 10 seconds or after 50 events
+    </div>
+
+    <div class="form-group">
+        <label>Name (will be masked):</label>
+        <input type="text" placeholder="Enter your name">
+    </div>
+
+    <div class="form-group">
+        <label>Email (will be masked):</label>
+        <input type="email" placeholder="Enter your email">
+    </div>
+
+    <div class="form-group">
+        <label>Password (will be masked):</label>
+        <input type="password" placeholder="Enter password">
+    </div>
+
+    <div class="form-group">
+        <label>Comments (will be masked):</label>
+        <textarea rows="4" placeholder="Enter your comments"></textarea>
+    </div>
+
+    <div class="rr-block">
+        <h3>🚫 Blocked Content</h3>
+        <p>This section has the .rr-block class and will NOT be recorded.</p>
+        <input type="text" placeholder="This input is not recorded">
+    </div>
+
+    <button onclick="alert('Button clicked!')">Click Me</button>
+    <button onclick="window.RRWebRecorder.flush()">Manual Flush</button>
+    <button onclick="console.log('Session ID:', window.RRWebRecorder.getSessionId())">
+        Show Session ID
+    </button>
+</div>
+
+<script>
+    // Log session ID when available
+    setTimeout(() => {
+        if (window.RRWebRecorder) {
+            console.log('Session ID:', window.RRWebRecorder.getSessionId());
+        }
+    }, 1000);
+</script>
+
+</body>
+</html>
