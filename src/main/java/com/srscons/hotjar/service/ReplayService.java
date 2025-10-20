@@ -1,6 +1,7 @@
 package com.srscons.hotjar.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srscons.hotjar.dto.ReplayIngestRequest;
 import com.srscons.hotjar.entity.ReplayEventBatch;
@@ -74,6 +75,30 @@ public class ReplayService {
 
     public List<ReplayEventBatch> getEventBatches(String sessionId) {
         return eventBatchRepository.findBySessionIdOrderByTimestampAsc(sessionId);
+    }
+
+    public String getFlatEvents(String sessionId) {
+        List<ReplayEventBatch> batches = getEventBatches(sessionId);
+        List<Object> allEvents = new ArrayList<>();
+
+        for (ReplayEventBatch batch : batches) {
+            try {
+                String eventsJson = batch.getEventsJson();
+                if (eventsJson != null && !eventsJson.isEmpty()) {
+                    List<Object> batchEvents = objectMapper.readValue(eventsJson, new TypeReference<List<Object>>() {});
+                    allEvents.addAll(batchEvents);
+                }
+            } catch (JsonProcessingException e) {
+                log.warn("Failed to parse events from batch for session {}, skipping batch", sessionId, e);
+            }
+        }
+
+        try {
+            return objectMapper.writeValueAsString(allEvents);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize combined events for session {}", sessionId, e);
+            throw new RuntimeException("Failed to serialize events", e);
+        }
     }
 
     @Transactional

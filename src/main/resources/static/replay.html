@@ -93,33 +93,16 @@
 
             try {
                 // Fetch events from the API
-                const response = await fetch(`/api/replay/events/${sessionId}`);
+                const response = await fetch(`/api/replay/events-flat/${sessionId}`);
 
                 if (!response.ok) {
                     throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
                 }
 
-                const batches = await response.json();
+                const events = await response.json();
 
-                if (!batches || batches.length === 0) {
-                    showError('No event batches found for this session.');
-                    return;
-                }
-
-                // Parse eventsJson field from each batch and concatenate into one array
-                const events = [];
-                for (const batch of batches) {
-                    if (batch.eventsJson) {
-                        // Parse the eventsJson string into an array
-                        const batchEvents = JSON.parse(batch.eventsJson);
-                        if (Array.isArray(batchEvents)) {
-                            events.push(...batchEvents);
-                        }
-                    }
-                }
-
-                if (events.length === 0) {
-                    showError('No events found in the batches.');
+                if (!events || !Array.isArray(events) || events.length === 0) {
+                    showError('No events found for this session.');
                     return;
                 }
 
