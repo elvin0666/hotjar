@@ -48,6 +48,15 @@ public class ReplayController {
         return ResponseEntity.ok(batches);
     }
 
+    @GetMapping("/events-flat/{sessionId}")
+    public ResponseEntity<String> getFlatEvents(@PathVariable String sessionId) {
+        String flatEvents = replayService.getFlatEvents(sessionId);
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/json")
+                .body(flatEvents);
+    }
+
+
     @DeleteMapping("/session/{sessionId}")
     public ResponseEntity<Void> deleteSession(@PathVariable String sessionId) {
         replayService.deleteSession(sessionId);
