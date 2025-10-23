@@ -1,0 +1,39 @@
+{
+  "name": "hotjar-like-tracker",
+  "version": "1.0.0",
+  "description": "Lightweight analytics tracking SDK similar to Hotjar",
+  "main": "dist/sdk.js",
+  "types": "dist/sdk.d.ts",
+  "scripts": {
+    "build": "npm run build:sdk && npm run build:loader",
+    "build:sdk": "rollup -c rollup.config.sdk.js",
+    "build:loader": "rollup -c rollup.config.loader.js",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:demo\"",
+    "dev:backend": "tsx watch backend/server.ts",
+    "dev:demo": "vite demo",
+    "build:demo": "vite build demo",
+    "test": "jest"
+  },
+  "keywords": ["analytics", "tracking", "session-replay", "privacy"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "rollup": "^4.9.0",
+    "rollup-plugin-filesize": "^10.0.0",
+    "tslib": "^2.6.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pako": "^2.1.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
+  }
+}

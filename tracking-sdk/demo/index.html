@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tracker Demo - Hotjar-like Analytics</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 18px;
+    }
+
+    .content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .demo-section {
+      margin-bottom: 30px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .masked-input {
+      border-color: #ff6b6b;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .status {
+      background: #f0f9ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+
+    .status-item {
+      margin-bottom: 8px;
+    }
+
+    .status-item strong {
+      color: #667eea;
+    }
+
+    .tall-content {
+      height: 500px;
+      background: linear-gradient(to bottom, #f0f9ff, #e0f2fe);
+      border-radius: 6px;
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #667eea;
+    }
+
+    .spa-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .spa-nav a {
+      color: #667eea;
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 2px solid #667eea;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .spa-nav a:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .event-log {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .event-log-item {
+      margin-bottom: 10px;
+      padding: 8px;
+      background: #2d2d2d;
+      border-radius: 4px;
+      border-left: 3px solid #667eea;
+    }
+
+    .event-type {
+      color: #4ec9b0;
+      font-weight: bold;
+    }
+
+    .event-time {
+      color: #858585;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎯 Analytics Tracker Demo</h1>
+      <p class="subtitle">Testing Hotjar-like tracking system with privacy-first features</p>
+    </header>
+
+    <div class="content">
+      <div class="status">
+        <div class="status-item">
+          <strong>Session ID:</strong> <span id="session-id">Loading...</span>
+        </div>
+        <div class="status-item">
+          <strong>User ID:</strong> <span id="user-id">Not identified</span>
+        </div>
+        <div class="status-item">
+          <strong>Tracker Status:</strong> <span id="tracker-status">Initializing...</span>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>Click Tracking</h2>
+        <div class="button-group">
+          <button id="btn-primary">Primary Action</button>
+          <button id="btn-secondary">Secondary Action</button>
+          <button id="btn-cta">Call to Action</button>
+          <button onclick="alert('Button clicked!')">Show Alert</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>Input Tracking (with Masking)</h2>
+        <label for="username">Username (tracked):</label>
+        <input type="text" id="username" placeholder="Enter username">
+
+        <label for="email">Email (masked):</label>
+        <input type="email" id="email" class="masked-input" placeholder="your@email.com">
+
+        <label for="password">Password (masked):</label>
+        <input type="password" id="password" class="masked-input" placeholder="Enter password">
+
+        <label for="message">Message (tracked):</label>
+        <textarea id="message" rows="4" placeholder="Type your message..."></textarea>
+      </div>
+
+      <div class="demo-section">
+        <h2>Custom Events</h2>
+        <div class="button-group">
+          <button onclick="trackCustomEvent('purchase', { amount: 99.99, currency: 'USD' })">
+            Track Purchase
+          </button>
+          <button onclick="trackCustomEvent('signup', { plan: 'pro' })">
+            Track Signup
+          </button>
+          <button onclick="identifyUser()">
+            Identify User
+          </button>
+          <button onclick="toggleConsent()">
+            Toggle Consent
+          </button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>SPA Navigation (Route Changes)</h2>
+        <div class="spa-nav">
+          <a href="#home" onclick="navigateTo('home')">Home</a>
+          <a href="#about" onclick="navigateTo('about')">About</a>
+          <a href="#products" onclick="navigateTo('products')">Products</a>
+          <a href="#contact" onclick="navigateTo('contact')">Contact</a>
+        </div>
+        <div id="spa-content">
+          <p>Click the navigation links above to trigger route change events.</p>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>Error Tracking</h2>
+        <div class="button-group">
+          <button onclick="triggerError()">Trigger Error</button>
+          <button onclick="triggerPromiseRejection()">Trigger Promise Rejection</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>Scroll Tracking</h2>
+        <p>Scroll down to trigger scroll depth events (tracked at 10% intervals).</p>
+        <div class="tall-content">
+          👇 Keep scrolling down 👇
+        </div>
+        <div class="tall-content">
+          🎉 You made it to the bottom! 🎉
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <h2>Event Log (Last 10 Events)</h2>
+      <div id="event-log" class="event-log">
+        <div class="event-log-item">
+          <div class="event-type">INFO</div>
+          <div class="event-time">Events will appear here as they are tracked...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the tracker (async loader) -->
+  <script
+    async
+    src="../dist/loader.min.js"
+    data-site-id="demo-site-123"
+    data-endpoint="http://localhost:3001/v1/ingest"
+    data-sdk-url="../dist/sdk.min.js"
+  ></script>
+
+  <!-- Demo app logic -->
+  <script>
+    // Wait for tracker to load
+    window.addEventListener('load', () => {
+      // Give the SDK time to load
+      setTimeout(() => {
+        updateStatus();
+        setupEventLogging();
+
+        // Enable debug mode
+        if (window.hj) {
+          hj('config', { debug: true });
+        }
+      }, 1000);
+    });
+
+    function updateStatus() {
+      const session = JSON.parse(localStorage.getItem('__hj_session') || '{}');
+      const userId = localStorage.getItem('__hj_user_id');
+
+      document.getElementById('session-id').textContent = session.id || 'N/A';
+      document.getElementById('user-id').textContent = userId || 'Not identified';
+      document.getElementById('tracker-status').textContent = window.hj?._loaded ? 'Active ✅' : 'Loading...';
+    }
+
+    function trackCustomEvent(name, properties) {
+      if (window.hj) {
+        hj('track', name, properties);
+        logEvent('custom', `${name}: ${JSON.stringify(properties)}`);
+      }
+    }
+
+    function identifyUser() {
+      const userId = 'user-' + Math.random().toString(36).substr(2, 9);
+      if (window.hj) {
+        hj('identify', userId, {
+          name: 'Demo User',
+          email: 'demo@example.com',
+          plan: 'premium'
+        });
+        logEvent('identify', `User identified: ${userId}`);
+        updateStatus();
+      }
+    }
+
+    let consentGranted = true;
+    function toggleConsent() {
+      consentGranted = !consentGranted;
+      if (window.hj) {
+        hj('consent', consentGranted);
+        logEvent('consent', `Consent ${consentGranted ? 'granted' : 'revoked'}`);
+      }
+    }
+
+    function navigateTo(page) {
+      document.getElementById('spa-content').innerHTML = `
+        <h3>Current Page: ${page}</h3>
+        <p>This simulates a SPA navigation. The tracker will detect this route change.</p>
+      `;
+      // The tracker will automatically detect the history.pushState
+    }
+
+    function triggerError() {
+      throw new Error('This is a test error for tracking purposes');
+    }
+
+    function triggerPromiseRejection() {
+      Promise.reject(new Error('Unhandled promise rejection test'));
+    }
+
+    // Event logging to UI
+    const eventLog = [];
+    let originalConsoleLog;
+
+    function setupEventLogging() {
+      // Intercept console.log to capture tracker events
+      originalConsoleLog = console.log;
+      console.log = function(...args) {
+        originalConsoleLog.apply(console, args);
+
+        // Check if it's a tracker log
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('[Tracker]')) {
+          const message = args.join(' ');
+          if (message.includes('Event queued:')) {
+            const eventType = args[2]; // The event type
+            logEvent(eventType, message);
+          }
+        }
+      };
+    }
+
+    function logEvent(type, message) {
+      const timestamp = new Date().toLocaleTimeString();
+      eventLog.unshift({ type, message, timestamp });
+
+      // Keep only last 10 events
+      if (eventLog.length > 10) {
+        eventLog.pop();
+      }
+
+      renderEventLog();
+    }
+
+    function renderEventLog() {
+      const logContainer = document.getElementById('event-log');
+      logContainer.innerHTML = eventLog.map(event => `
+        <div class="event-log-item">
+          <div class="event-type">${event.type}</div>
+          <div class="event-time">${event.timestamp}</div>
+          <div>${event.message}</div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
