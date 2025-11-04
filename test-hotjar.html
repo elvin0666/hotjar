@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Hotjar Integration</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #667eea;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    .status {
+      background: #f0f9ff;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+  </style>
+
+  <!-- Configure Hotjar before loading -->
+  <script>
+    window.HJ_CONFIG = {
+      projectId: "test-integration",
+      endpoint: "http://localhost:3001/v1/ingest",
+      debug: true
+    };
+  </script>
+
+  <!-- Load Hotjar from localhost:8080 -->
+  <script src="http://localhost:8080/hotjar.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>✅ Hotjar Test Page</h1>
+
+    <div class="status">
+      <strong>Status:</strong> <span id="status">Checking...</span><br>
+      <strong>Session ID:</strong> <span id="session">Loading...</span>
+    </div>
+
+    <h2>Test Tracking</h2>
+    <button onclick="testTracking()">Track Custom Event</button>
+    <button onclick="testIdentify()">Identify User</button>
+    <button onclick="testConsent()">Toggle Consent</button>
+
+    <h2>Form Input (Tracked)</h2>
+    <input type="text" placeholder="Type something..." style="width: 100%; padding: 10px; margin: 10px 0;">
+
+    <h2>Masked Input</h2>
+    <input type="email" placeholder="Email (masked)" style="width: 100%; padding: 10px; margin: 10px 0;">
+  </div>
+
+  <script>
+    // Check status
+    setTimeout(() => {
+      if (window.HJ && window.__hj_tracker) {
+        document.getElementById('status').textContent = '✅ Active';
+        document.getElementById('status').style.color = 'green';
+      } else {
+        document.getElementById('status').textContent = '❌ Not loaded';
+        document.getElementById('status').style.color = 'red';
+      }
+
+      try {
+        const session = JSON.parse(localStorage.getItem('__hj_session') || '{}');
+        document.getElementById('session').textContent = session.id || 'N/A';
+      } catch (e) {
+        document.getElementById('session').textContent = 'Error';
+      }
+    }, 1000);
+
+    function testTracking() {
+      if (window.HJ) {
+        HJ.track('test_button_click', {
+          button: 'test_tracking',
+          timestamp: new Date().toISOString()
+        });
+        alert('✅ Custom event tracked! Check console.');
+      } else {
+        alert('❌ HJ not loaded');
+      }
+    }
+
+    function testIdentify() {
+      if (window.HJ) {
+        const userId = 'test-user-' + Math.random().toString(36).substr(2, 9);
+        HJ.identify(userId, {
+          name: 'Test User',
+          email: 'test@example.com',
+          source: 'test-page'
+        });
+        alert('✅ User identified: ' + userId);
+      }
+    }
+
+    let consent = true;
+    function testConsent() {
+      if (window.HJ) {
+        consent = !consent;
+        HJ.consent(consent);
+        alert(consent ? '✅ Consent granted' : '❌ Consent revoked');
+      }
+    }
+  </script>
+</body>
+</html>

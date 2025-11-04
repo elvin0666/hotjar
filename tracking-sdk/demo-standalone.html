@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standalone Hotjar Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 18px;
+    }
+
+    .content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .demo-section {
+      margin-bottom: 30px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .masked-input {
+      border-color: #ff6b6b;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .status {
+      background: #f0f9ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+
+    .status-item {
+      margin-bottom: 8px;
+    }
+
+    .status-item strong {
+      color: #667eea;
+    }
+
+    .code-block {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
+
+    .tall-content {
+      height: 300px;
+      background: linear-gradient(to bottom, #f0f9ff, #e0f2fe);
+      border-radius: 6px;
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Standalone Hotjar Demo</h1>
+      <p class="subtitle">Self-starting tracking with no configuration needed</p>
+    </header>
+
+    <div class="content">
+      <h2>Usage Examples</h2>
+
+      <div class="demo-section">
+        <h3>Example 1: Auto-start with default config</h3>
+        <div class="code-block">
+&lt;script src="http://localhost:8080/hotjar.js"&gt;&lt;/script&gt;
+        </div>
+        <p>This will auto-start tracking with default configuration.</p>
+      </div>
+
+      <div class="demo-section">
+        <h3>Example 2: Auto-start with custom config</h3>
+        <div class="code-block">
+&lt;script&gt;
+  window.HJ_CONFIG = {
+    projectId: "my-project-123",
+    endpoint: "http://localhost:3001/v1/ingest",
+    debug: true
+  };
+&lt;/script&gt;
+&lt;script src="http://localhost:8080/hotjar.js"&gt;&lt;/script&gt;
+        </div>
+        <p>Define HJ_CONFIG before loading the script for custom configuration.</p>
+      </div>
+
+      <div class="demo-section">
+        <h3>Example 3: Manual start</h3>
+        <div class="code-block">
+&lt;script&gt;
+  window.HJ_AUTO_START = false;
+&lt;/script&gt;
+&lt;script src="http://localhost:8080/hotjar.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  // Start manually later
+  HJ.start();
+&lt;/script&gt;
+        </div>
+        <p>Disable auto-start and manually initialize when ready.</p>
+      </div>
+
+      <div class="demo-section">
+        <h3>Example 4: Using Public API</h3>
+        <div class="code-block">
+// Track custom events
+HJ.track('purchase', { amount: 99.99, currency: 'USD' });
+
+// Identify user
+HJ.identify('user-123', { name: 'John Doe', plan: 'pro' });
+
+// Update config
+HJ.config({ debug: true });
+
+// Manage consent
+HJ.consent(false); // Revoke consent
+
+// Stop tracking
+HJ.stop();
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="status">
+        <div class="status-item">
+          <strong>Status:</strong> <span id="tracker-status">Loading...</span>
+        </div>
+        <div class="status-item">
+          <strong>Session ID:</strong> <span id="session-id">N/A</span>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>Interactive Demo</h2>
+        <div class="button-group">
+          <button onclick="testClick()">Test Click Event</button>
+          <button onclick="testCustomEvent()">Test Custom Event</button>
+          <button onclick="testIdentify()">Test Identify</button>
+          <button onclick="testConsent()">Toggle Consent</button>
+        </div>
+
+        <label for="test-input">Test Input (tracked):</label>
+        <input type="text" id="test-input" placeholder="Type something...">
+
+        <label for="test-email">Email (masked):</label>
+        <input type="email" id="test-email" class="masked-input" placeholder="your@email.com">
+      </div>
+
+      <div class="demo-section">
+        <h2>Scroll Tracking</h2>
+        <p>Scroll down to trigger scroll depth events.</p>
+        <div class="tall-content">Scroll content area</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Hotjar with custom config -->
+  <script>
+    window.HJ_CONFIG = {
+      projectId: "demo-standalone",
+      endpoint: "http://localhost:3001/v1/ingest",
+      debug: true
+    };
+  </script>
+  <script src="http://localhost:8080/hotjar.js"></script>
+
+  <!-- Demo app logic -->
+  <script>
+    // Update status
+    setTimeout(() => {
+      const status = window.HJ ? 'Active' : 'Not loaded';
+      document.getElementById('tracker-status').textContent = status;
+
+      try {
+        const session = JSON.parse(localStorage.getItem('__hj_session') || '{}');
+        document.getElementById('session-id').textContent = session.id || 'N/A';
+      } catch (e) {
+        // Ignore
+      }
+    }, 500);
+
+    function testClick() {
+      alert('Click event tracked automatically!');
+    }
+
+    function testCustomEvent() {
+      if (window.HJ) {
+        HJ.track('test_event', {
+          timestamp: new Date().toISOString(),
+          source: 'demo_page'
+        });
+        alert('Custom event tracked!');
+      }
+    }
+
+    function testIdentify() {
+      if (window.HJ) {
+        const userId = 'user-' + Math.random().toString(36).substr(2, 9);
+        HJ.identify(userId, {
+          name: 'Demo User',
+          email: 'demo@example.com'
+        });
+        alert('User identified: ' + userId);
+      }
+    }
+
+    let consentGranted = true;
+    function testConsent() {
+      if (window.HJ) {
+        consentGranted = !consentGranted;
+        HJ.consent(consentGranted);
+        alert('Consent ' + (consentGranted ? 'granted' : 'revoked'));
+      }
+    }
+  </script>
+</body>
+</html>

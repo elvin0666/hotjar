@@ -3,27 +3,38 @@
  * Handles incoming event batches, validates, scrubs PII, and stores them
  */
 
+import * as fs from 'fs';
 import express, { Request, Response } from 'express';
 import { createServer } from 'http';
 import * as pako from 'pako';
+import * as path from 'path';
 import { eventBatchSchema, ValidatedEventBatch } from './validation';
 import { scrubEventBatch } from './pii-scrubber';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Serve static files from dist directory (for hotjar.js)
+app.use(express.static(path.join(__dirname, '../dist')));
+
 // Middleware to parse gzipped JSON
 app.use('/v1/ingest', express.raw({ type: 'application/gzip', limit: '10mb' }));
 app.use(express.json());
 
-// CORS for development
+// ✅ CORS (development, specific origin)
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const ORIGIN = 'http://localhost:5173'; // frontend url
+  res.header('Access-Control-Allow-Origin', ORIGIN);
+  res.header('Vary', 'Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Content-Encoding');
+  res.header(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Content-Encoding'
+  );
 
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.sendStatus(204); // preflight response
   }
 
   next();
@@ -38,6 +49,52 @@ app.get('/health', (req, res) => {
 app.post('/v1/ingest', async (req: Request, res: Response) => {
   try {
     let data: any;
+
+    // Return latest session timeline (dev helper)
+    app.get('/v1/session/latest', (req: Request, res: Response) => {
+      try {
+        const site = (req.query.site as string) || 'cvgen-prod';
+        const filePath = path.join(__dirname, '../data/events', `${site}.jsonl`);
+        if (!fs.existsSync(filePath)) {
+          return res.status(404).json({ error: 'No events file found', filePath });
+        }
+
+        const lines = fs.readFileSync(filePath, 'utf8')
+            .trim()
+            .split(/\r?\n/)
+            .slice(-1000); // last 1000 events
+
+        const events = lines.map(l => JSON.parse(l));
+        if (events.length === 0) return res.json({ site, events: [] });
+
+        // group by sessionId and pick the largest (latest by count)
+        const groups = new Map<string, any[]>();
+        for (const e of events) {
+          if (!groups.has(e.sessionId)) groups.set(e.sessionId, []);
+          groups.get(e.sessionId)!.push(e);
+        }
+        const sorted = [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
+        const [sessionId, sessionEvents] = sorted[0];
+
+        // sort by timestamp and enrich with ISO time
+        const timeline = sessionEvents
+            .slice()
+            .sort((a, b) => a.timestamp - b.timestamp)
+            .map(e => ({
+              time: new Date(e.timestamp).toISOString(),
+              type: e.type,
+              name: e.name ?? null,
+              url: e.url,
+              userId: e.userId ?? null,
+              properties: e.properties ?? null,
+            }));
+
+        res.json({ site, sessionId, count: timeline.length, timeline });
+      } catch (err: any) {
+        console.error('[Timeline] error:', err);
+        res.status(500).json({ error: 'failed_to_build_timeline', detail: String(err) });
+      }
+    });
 
     // Check if data is gzipped
     if (req.headers['content-encoding'] === 'gzip' ||

@@ -5,9 +5,12 @@
   "main": "dist/sdk.js",
   "types": "dist/sdk.d.ts",
   "scripts": {
-    "build": "npm run build:sdk && npm run build:loader",
+    "build": "npm run build:sdk && npm run build:loader && npm run build:standalone",
     "build:sdk": "rollup -c rollup.config.sdk.js",
     "build:loader": "rollup -c rollup.config.loader.js",
+    "build:standalone": "rollup -c rollup.config.standalone.js",
+    "serve": "tsx backend/server.ts",
+    "serve:hotjar": "node serve-hotjar.js",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:demo\"",
     "dev:backend": "tsx watch backend/server.ts",
     "dev:demo": "vite demo",
