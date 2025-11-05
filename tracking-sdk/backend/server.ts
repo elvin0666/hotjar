@@ -17,6 +17,9 @@ const PORT = process.env.PORT || 3001;
 // Serve static files from dist directory (for hotjar.js)
 app.use(express.static(path.join(__dirname, '../dist')));
 
+// Serve static files from backend directory (for replay.html)
+app.use(express.static(path.join(__dirname)));
+
 // Middleware to parse gzipped JSON
 app.use('/v1/ingest', express.raw({ type: 'application/gzip', limit: '10mb' }));
 app.use(express.json());
@@ -27,7 +30,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', ORIGIN);
   res.header('Vary', 'Origin');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.header(
       'Access-Control-Allow-Headers',
       'Content-Type, Content-Encoding'
@@ -236,6 +239,161 @@ async function storeEventBatch(batch: ValidatedEventBatch): Promise<void> {
 
   console.log(`[Storage] Stored ${batch.events.length} events to ${logFile}`);
 }
+
+// =====================================================
+// RRWeb Session Replay Endpoints
+// =====================================================
+
+/**
+ * POST /api/replay/ingest
+ * Ingests rrweb events and stores them in sessions/<sessionId>.json
+ * Each line in the file is a JSON array of events
+ */
+app.post('/api/replay/ingest', (req: Request, res: Response) => {
+  try {
+    const { sessionId, events, timestamp, url, userAgent, sessionEnd } = req.body;
+
+    if (!sessionId || !events || !Array.isArray(events)) {
+      return res.status(400).json({ error: 'Invalid payload: sessionId and events array required' });
+    }
+
+    const sessionsDir = path.join(__dirname, '../sessions');
+    const sessionFile = path.join(sessionsDir, `${sessionId}.json`);
+
+    // Create sessions directory if it doesn't exist
+    if (!fs.existsSync(sessionsDir)) {
+      fs.mkdirSync(sessionsDir, { recursive: true });
+    }
+
+    // Append events as a JSON array on a new line
+    fs.appendFileSync(sessionFile, JSON.stringify(events) + '\n');
+
+    console.log(`[RRWeb] Stored ${events.length} events for session ${sessionId}${sessionEnd ? ' (session ended)' : ''}`);
+
+    res.status(202).json({ success: true, eventsStored: events.length });
+  } catch (error) {
+    console.error('[RRWeb] Error ingesting events:', error);
+    res.status(500).json({ error: 'Failed to store events' });
+  }
+});
+
+/**
+ * GET /sessions
+ * Returns list of available sessions from the sessions/ directory
+ * Response: [{ id: string, file: string, eventCount?: number, lastModified?: string }]
+ */
+app.get('/sessions', (req: Request, res: Response) => {
+  try {
+    const sessionsDir = path.join(__dirname, '../sessions');
+
+    if (!fs.existsSync(sessionsDir)) {
+      return res.json([]);
+    }
+
+    const files = fs.readdirSync(sessionsDir)
+      .filter(file => file.endsWith('.json'))
+      .map(file => {
+        const filePath = path.join(sessionsDir, file);
+        const stats = fs.statSync(filePath);
+        const id = path.basename(file, '.json');
+
+        // Count events (lines in file)
+        const content = fs.readFileSync(filePath, 'utf8');
+        const lines = content.trim().split(/\r?\n/).filter(line => line.length > 0);
+
+        // Parse each line to count total events
+        let eventCount = 0;
+        for (const line of lines) {
+          try {
+            const batch = JSON.parse(line);
+            if (Array.isArray(batch)) {
+              eventCount += batch.length;
+            }
+          } catch (e) {
+            // Skip invalid lines
+          }
+        }
+
+        return {
+          id,
+          file,
+          eventCount,
+          lastModified: stats.mtime.toISOString(),
+          size: stats.size
+        };
+      })
+      // Sort by last modified time (descending)
+      .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
+
+    res.json(files);
+  } catch (error) {
+    console.error('[Sessions] Error listing sessions:', error);
+    res.status(500).json({ error: 'Failed to list sessions' });
+  }
+});
+
+/**
+ * GET /sessions/:id
+ * Returns all rrweb events for a session, flattened into a single array
+ * Response: Array of rrweb event objects
+ */
+app.get('/sessions/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const sessionsDir = path.join(__dirname, '../sessions');
+    const sessionFile = path.join(sessionsDir, `${id}.json`);
+
+    if (!fs.existsSync(sessionFile)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const content = fs.readFileSync(sessionFile, 'utf8');
+    const lines = content.trim().split(/\r?\n/).filter(line => line.length > 0);
+
+    // Parse each line (each is an array) and flatten into single array
+    const allEvents: any[] = [];
+    for (const line of lines) {
+      try {
+        const batch = JSON.parse(line);
+        if (Array.isArray(batch)) {
+          allEvents.push(...batch);
+        }
+      } catch (e) {
+        console.error('[Sessions] Failed to parse line:', e);
+        // Continue processing other lines
+      }
+    }
+
+    console.log(`[Sessions] Retrieved ${allEvents.length} events for session ${id}`);
+    res.json(allEvents);
+  } catch (error) {
+    console.error('[Sessions] Error retrieving session:', error);
+    res.status(500).json({ error: 'Failed to retrieve session' });
+  }
+});
+
+/**
+ * DELETE /sessions/:id
+ * Deletes a session file
+ */
+app.delete('/sessions/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const sessionsDir = path.join(__dirname, '../sessions');
+    const sessionFile = path.join(sessionsDir, `${id}.json`);
+
+    if (!fs.existsSync(sessionFile)) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    fs.unlinkSync(sessionFile);
+    console.log(`[Sessions] Deleted session ${id}`);
+    res.json({ success: true, message: 'Session deleted' });
+  } catch (error) {
+    console.error('[Sessions] Error deleting session:', error);
+    res.status(500).json({ error: 'Failed to delete session' });
+  }
+});
 
 // Start server
 const server = createServer(app);

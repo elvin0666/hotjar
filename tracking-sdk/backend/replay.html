@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Replay Player</title>
+
+    <!-- RRWeb Player CSS from CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/style.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        button.delete-btn {
+            background: #e74c3c;
+        }
+
+        button.delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .session-info {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .session-info span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .session-info strong {
+            color: #333;
+        }
+
+        .player-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        #player {
+            width: 100%;
+            min-height: 400px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 5px;
+            padding: 12px 16px;
+            color: #c33;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .success {
+            background: #efe;
+            border: 1px solid #cfc;
+            border-radius: 5px;
+            padding: 12px 16px;
+            color: #363;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        /* Override rrweb-player styles for better integration */
+        .rr-player {
+            margin-top: 20px;
+        }
+
+        .rr-player__frame {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Session Replay Player</h1>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="session-select">Select Session:</label>
+                    <select id="session-select">
+                        <option value="">Loading sessions...</option>
+                    </select>
+                </div>
+
+                <button id="play-btn" disabled>Load & Play</button>
+                <button id="refresh-btn">Refresh Sessions</button>
+                <button id="delete-btn" class="delete-btn" disabled>Delete Session</button>
+            </div>
+
+            <div id="session-info" class="session-info" style="display: none; margin-top: 15px;">
+                <span><strong>Events:</strong> <span id="event-count">-</span></span>
+                <span><strong>Last Modified:</strong> <span id="last-modified">-</span></span>
+                <span><strong>Size:</strong> <span id="file-size">-</span></span>
+            </div>
+
+            <div id="message"></div>
+        </header>
+
+        <div class="player-container">
+            <div id="player">
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p>Select a session and click "Load & Play" to view the replay</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RRWeb and RRWeb Player from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/index.js"></script>
+
+    <script>
+        // State
+        let sessions = [];
+        let currentPlayer = null;
+        let selectedSessionId = null;
+
+        // DOM elements
+        const sessionSelect = document.getElementById('session-select');
+        const playBtn = document.getElementById('play-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const deleteBtn = document.getElementById('delete-btn');
+        const playerContainer = document.getElementById('player');
+        const messageEl = document.getElementById('message');
+        const sessionInfoEl = document.getElementById('session-info');
+        const eventCountEl = document.getElementById('event-count');
+        const lastModifiedEl = document.getElementById('last-modified');
+        const fileSizeEl = document.getElementById('file-size');
+
+        // Initialize
+        loadSessions();
+
+        // Event listeners
+        sessionSelect.addEventListener('change', handleSessionSelect);
+        playBtn.addEventListener('click', handlePlayClick);
+        refreshBtn.addEventListener('click', handleRefreshClick);
+        deleteBtn.addEventListener('click', handleDeleteClick);
+
+        /**
+         * Load available sessions from the server
+         */
+        async function loadSessions() {
+            try {
+                showMessage('Loading sessions...', 'loading');
+
+                const response = await fetch('/sessions');
+                if (!response.ok) throw new Error('Failed to fetch sessions');
+
+                sessions = await response.json();
+
+                // Populate dropdown
+                sessionSelect.innerHTML = sessions.length === 0
+                    ? '<option value="">No sessions available</option>'
+                    : '<option value="">-- Select a session --</option>';
+
+                sessions.forEach(session => {
+                    const option = document.createElement('option');
+                    option.value = session.id;
+                    option.textContent = `${session.id} (${session.eventCount} events)`;
+                    sessionSelect.appendChild(option);
+                });
+
+                clearMessage();
+
+                if (sessions.length === 0) {
+                    showMessage('No sessions found. Record a session first.', 'info');
+                }
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+                showMessage('Error loading sessions: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Handle session selection
+         */
+        function handleSessionSelect() {
+            selectedSessionId = sessionSelect.value;
+            playBtn.disabled = !selectedSessionId;
+            deleteBtn.disabled = !selectedSessionId;
+
+            if (selectedSessionId) {
+                // Find session and show info
+                const session = sessions.find(s => s.id === selectedSessionId);
+                if (session) {
+                    eventCountEl.textContent = session.eventCount.toLocaleString();
+                    lastModifiedEl.textContent = new Date(session.lastModified).toLocaleString();
+                    fileSizeEl.textContent = formatBytes(session.size);
+                    sessionInfoEl.style.display = 'flex';
+                }
+            } else {
+                sessionInfoEl.style.display = 'none';
+            }
+        }
+
+        /**
+         * Handle play button click
+         */
+        async function handlePlayClick() {
+            if (!selectedSessionId) return;
+
+            try {
+                showMessage('Loading events...', 'loading');
+                playBtn.disabled = true;
+
+                // Fetch events for the selected session
+                const response = await fetch(`/sessions/${selectedSessionId}`);
+                if (!response.ok) throw new Error('Failed to fetch session events');
+
+                const events = await response.json();
+
+                if (!Array.isArray(events) || events.length === 0) {
+                    throw new Error('No events found in session');
+                }
+
+                // Clear existing player
+                if (currentPlayer) {
+                    currentPlayer = null;
+                }
+                playerContainer.innerHTML = '';
+
+                // Create new player
+                currentPlayer = new rrwebPlayer({
+                    target: playerContainer,
+                    props: {
+                        events,
+                        width: playerContainer.offsetWidth,
+                        height: 600,
+                        autoPlay: true,
+                        showController: true,
+                        skipInactive: true,
+                        speed: 1,
+                        speedOption: [0.5, 1, 2, 4, 8]
+                    }
+                });
+
+                showMessage(`Loaded ${events.length} events. Playing...`, 'success');
+
+                // Clear success message after 3 seconds
+                setTimeout(() => {
+                    if (messageEl.classList.contains('success')) {
+                        clearMessage();
+                    }
+                }, 3000);
+
+            } catch (error) {
+                console.error('Error playing session:', error);
+                showMessage('Error playing session: ' + error.message, 'error');
+            } finally {
+                playBtn.disabled = false;
+            }
+        }
+
+        /**
+         * Handle refresh button click
+         */
+        async function handleRefreshClick() {
+            selectedSessionId = null;
+            sessionInfoEl.style.display = 'none';
+            await loadSessions();
+        }
+
+        /**
+         * Handle delete button click
+         */
+        async function handleDeleteClick() {
+            if (!selectedSessionId) return;
+
+            if (!confirm(`Are you sure you want to delete session "${selectedSessionId}"?`)) {
+                return;
+            }
+
+            try {
+                showMessage('Deleting session...', 'loading');
+                deleteBtn.disabled = true;
+
+                const response = await fetch(`/sessions/${selectedSessionId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete session');
+
+                showMessage('Session deleted successfully', 'success');
+
+                // Clear player and reload sessions
+                if (currentPlayer) {
+                    currentPlayer = null;
+                }
+                playerContainer.innerHTML = '<div class="empty-state"><p>Session deleted</p></div>';
+
+                selectedSessionId = null;
+                sessionInfoEl.style.display = 'none';
+                await loadSessions();
+
+            } catch (error) {
+                console.error('Error deleting session:', error);
+                showMessage('Error deleting session: ' + error.message, 'error');
+            } finally {
+                deleteBtn.disabled = false;
+            }
+        }
+
+        /**
+         * Show a message to the user
+         */
+        function showMessage(text, type = 'info') {
+            messageEl.textContent = text;
+            messageEl.className = type;
+            messageEl.style.display = 'block';
+        }
+
+        /**
+         * Clear the message
+         */
+        function clearMessage() {
+            messageEl.textContent = '';
+            messageEl.className = '';
+            messageEl.style.display = 'none';
+        }
+
+        /**
+         * Format bytes to human-readable format
+         */
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
